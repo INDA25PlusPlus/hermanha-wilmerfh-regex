@@ -20,8 +20,8 @@ impl Literal {
 }
 
 struct Alternation {
-    left: Box<Regex>,
-    right: Box<Regex>,
+    left: Box<Expression>,
+    right: Box<Expression>,
 }
 
 impl Alternation {
@@ -56,16 +56,16 @@ impl Alternation {
     }
 }
 
-enum Regex {
+enum Expression {
     Literal(Literal),
     Alternation(Alternation),
 }
 
-impl Regex {
+impl Expression {
     fn build(&self, adjecents: &mut Vec<Vec<Edge>>) -> (usize, usize) {
         match self {
-            Regex::Literal(l) => l.build(adjecents),
-            Regex::Alternation(a) => a.build(adjecents),
+            Expression::Literal(l) => l.build(adjecents),
+            Expression::Alternation(a) => a.build(adjecents),
         }
     }
 
