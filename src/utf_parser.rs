@@ -18,7 +18,36 @@ fn utf8_size(b0: u8) -> Option<usize> {
     }
 }
 
-pub fn bytes_to_codepoints(bytes: Vec<u8>) -> Vec<CodePoint> {
+pub struct Parser {
+    code_points: Vec<CodePoint>,
+    index: usize,
+}
+
+impl Parser {
+    pub fn new(code_points: Vec<CodePoint>) -> Self {
+        Self { code_points, index: 0 }
+    }
+
+    pub fn peek(&self) -> Option<CodePoint> {
+        if self.index >= self.code_points.len() {
+            None
+        } else {
+            Some(self.code_points[self.index].clone())
+        }
+    }
+    
+    pub fn consume(&mut self) -> Option<CodePoint> {
+        if self.index >= self.code_points.len() {
+            None
+        } else {
+            let cp = self.code_points[self.index].clone();
+            self.index += 1;
+            Some(cp)
+        }
+    }
+}
+
+pub fn bytes_to_codepoints(bytes: Vec<u8>) -> Parser {
     let mut iter = bytes.into_iter();
     let mut code_points = Vec::new();
 
@@ -44,7 +73,7 @@ pub fn bytes_to_codepoints(bytes: Vec<u8>) -> Vec<CodePoint> {
         code_points.push(cp);
     }
 
-    return code_points;
+    return Parser::new(code_points);
 }
 
 #[cfg(test)]
@@ -53,14 +82,16 @@ mod tests {
 
     #[test]
     fn ascii_string() {
-        let codepoints = bytes_to_codepoints("hello".as_bytes().to_vec());
-        assert_eq!(codepoints.len(), 5);
+        let code_points = bytes_to_codepoints("hello".as_bytes().to_vec()).code_points;
+        assert_eq!(code_points.len(), 5);
     }
 
     #[test]
     fn mixed_multibyte() {
-        // "héllo" — é is 2 bytes in UTF-8
-        let codepoints = bytes_to_codepoints("héllo, théré!".as_bytes().to_vec());
-        assert_eq!(codepoints.len(), 13);
+        let mut parser = bytes_to_codepoints("héllo, théré!".as_bytes().to_vec());
+        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
+        assert_eq!(parser.consume().unwrap().bytes.len(), 2);
+        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
+        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
     }
 }
