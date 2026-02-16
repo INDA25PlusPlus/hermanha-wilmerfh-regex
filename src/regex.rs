@@ -1,7 +1,8 @@
 use crate::nfa::{Edge, EdgeType, NFA};
+use crate::utf_parser::CodePoint;
 
 struct Literal {
-    value: char,
+    value: CodePoint,
 }
 
 impl Literal {
@@ -12,7 +13,7 @@ impl Literal {
         adjecents.push(vec![]);
         adjecents[start].push(Edge {
             to: end,
-            r#type: EdgeType::Regular(self.value),
+            r#type: EdgeType::Regular(self.value.clone()),
         });
         (start, end)
     }

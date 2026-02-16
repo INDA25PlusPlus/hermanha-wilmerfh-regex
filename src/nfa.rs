@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
-#[derive(Clone, Copy)]
+use crate::utf_parser::CodePoint;
+
+#[derive(Clone)]
 pub enum EdgeType {
-    Regular(char),
+    Regular(CodePoint),
     Epsilon,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Edge {
     pub to: usize,
     pub r#type: EdgeType,

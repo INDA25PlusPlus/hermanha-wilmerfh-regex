@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct CodePoint {
     bytes: Vec<u8>,
     size: usize,
