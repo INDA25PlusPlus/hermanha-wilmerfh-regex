@@ -1,5 +1,5 @@
 use crate::nfa::{Edge, EdgeType, NFA};
-use crate::utf_parser::CodePoint;
+use crate::utf_parser::{CodePoint, Parser};
 
 struct Literal {
     value: CodePoint,
@@ -62,6 +62,31 @@ enum Expression {
 }
 
 impl Expression {
+    fn parse(parser: &mut Parser) -> Self {
+        let first_codepoint = parser.consume().expect("unexpected end of input");
+
+        let Some(next) = parser.peek() else {
+            return Expression::Literal(Literal {
+                value: first_codepoint,
+            });
+        };
+
+        if next == CodePoint::pipe() {
+            parser.consume();
+            let rest = Self::parse(parser);
+            Expression::Alternation(Alternation {
+                left: Box::new(Expression::Literal(Literal {
+                    value: first_codepoint,
+                })),
+                right: Box::new(rest),
+            })
+        } else {
+            Expression::Literal(Literal {
+                value: first_codepoint,
+            })
+        }
+    }
+
     fn build(&self, adjecents: &mut Vec<Vec<Edge>>) -> (usize, usize) {
         match self {
             Expression::Literal(l) => l.build(adjecents),
@@ -77,5 +102,25 @@ impl Expression {
             start,
             end,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utf_parser::bytes_to_codepoints;
+
+    #[test]
+    fn parse_single_literal() {
+        let mut parser = bytes_to_codepoints("a".as_bytes().to_vec());
+        let expression = Expression::parse(&mut parser);
+        assert!(matches!(expression, Expression::Literal(_)));
+    }
+
+    #[test]
+    fn parse_alternation() {
+        let mut parser = bytes_to_codepoints("a|b".as_bytes().to_vec());
+        let expression = Expression::parse(&mut parser);
+        assert!(matches!(expression, Expression::Alternation(_)));
     }
 }

@@ -1,7 +1,16 @@
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CodePoint {
     bytes: Vec<u8>,
     size: usize,
+}
+
+impl CodePoint {
+    pub fn pipe() -> Self {
+        Self {
+            bytes: vec![b'|'],
+            size: 1,
+        }
+    }
 }
 
 fn utf8_size(b0: u8) -> Option<usize> {
@@ -25,7 +34,10 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(code_points: Vec<CodePoint>) -> Self {
-        Self { code_points, index: 0 }
+        Self {
+            code_points,
+            index: 0,
+        }
     }
 
     pub fn peek(&self) -> Option<CodePoint> {
@@ -35,7 +47,7 @@ impl Parser {
             Some(self.code_points[self.index].clone())
         }
     }
-    
+
     pub fn consume(&mut self) -> Option<CodePoint> {
         if self.index >= self.code_points.len() {
             None
