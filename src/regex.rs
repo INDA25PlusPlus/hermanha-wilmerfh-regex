@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::nfa::{Edge, EdgeType, NFA};
 use crate::utf_parser::{CodePoint, Parser};
 
@@ -100,7 +102,7 @@ impl Expression {
         NFA {
             adjecents,
             start,
-            end,
+            accepting: HashSet::from([end]),
         }
     }
 }
