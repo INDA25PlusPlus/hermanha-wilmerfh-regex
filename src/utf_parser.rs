@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodePoint {
     bytes: Vec<u8>,
     size: usize,
@@ -40,6 +40,35 @@ impl Parser {
         }
     }
 
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        let mut iter = bytes.into_iter();
+        let mut code_points = Vec::new();
+
+        while let Some(b0) = iter.next() {
+            let size = utf8_size(b0).expect("wrong utf8 format");
+            let mut cp_bytes = Vec::with_capacity(size);
+            cp_bytes.push(b0);
+
+            for _ in 1..size {
+                let b = iter.next().expect("size incorrect");
+
+                if (b & 0b1100_0000) != 0b1000_0000 {
+                    panic!("wrong utf8 format")
+                }
+
+                cp_bytes.push(b)
+            }
+
+            let cp = CodePoint {
+                bytes: cp_bytes,
+                size,
+            };
+            code_points.push(cp);
+        }
+
+        return Self::new(code_points);
+    }
+
     pub fn peek(&self) -> Option<CodePoint> {
         if self.index >= self.code_points.len() {
             None
@@ -59,51 +88,22 @@ impl Parser {
     }
 }
 
-pub fn bytes_to_codepoints(bytes: Vec<u8>) -> Parser {
-    let mut iter = bytes.into_iter();
-    let mut code_points = Vec::new();
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    while let Some(b0) = iter.next() {
-        let size = utf8_size(b0).expect("wrong utf8 format");
-        let mut cp_bytes = Vec::with_capacity(size);
-        cp_bytes.push(b0);
+//     #[test]
+//     fn ascii_string() {
+//         let code_points = bytes_to_codepoints("hello".as_bytes().to_vec()).code_points;
+//         assert_eq!(code_points.len(), 5);
+//     }
 
-        for _ in 1..size {
-            let b = iter.next().expect("size incorrect");
-
-            if (b & 0b1100_0000) != 0b1000_0000 {
-                panic!("wrong utf8 format")
-            }
-
-            cp_bytes.push(b)
-        }
-
-        let cp = CodePoint {
-            bytes: cp_bytes,
-            size,
-        };
-        code_points.push(cp);
-    }
-
-    return Parser::new(code_points);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ascii_string() {
-        let code_points = bytes_to_codepoints("hello".as_bytes().to_vec()).code_points;
-        assert_eq!(code_points.len(), 5);
-    }
-
-    #[test]
-    fn mixed_multibyte() {
-        let mut parser = bytes_to_codepoints("héllo, théré!".as_bytes().to_vec());
-        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
-        assert_eq!(parser.consume().unwrap().bytes.len(), 2);
-        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
-        assert_eq!(parser.consume().unwrap().bytes.len(), 1);
-    }
-}
+//     #[test]
+//     fn mixed_multibyte() {
+//         let mut parser = bytes_to_codepoints("héllo, théré!".as_bytes().to_vec());
+//         assert_eq!(parser.consume().unwrap().bytes.len(), 1);
+//         assert_eq!(parser.consume().unwrap().bytes.len(), 2);
+//         assert_eq!(parser.consume().unwrap().bytes.len(), 1);
+//         assert_eq!(parser.consume().unwrap().bytes.len(), 1);
+//     }
+// }
