@@ -167,6 +167,52 @@ mod tests {
     }
 
     #[test]
+    fn test_star_single_char() {
+        let regex = Regex::new("a*".as_bytes().to_vec());
+
+        let empty = bytes_to_codepoints("".as_bytes().to_vec());
+        assert!(regex.accepts(empty));
+        let a = bytes_to_codepoints("a".as_bytes().to_vec());
+        assert!(regex.accepts(a));
+        let aaa = bytes_to_codepoints("aaa".as_bytes().to_vec());
+        assert!(regex.accepts(aaa));
+        let b = bytes_to_codepoints("b".as_bytes().to_vec());
+        assert!(!regex.accepts(b));
+    }
+
+    #[test]
+    fn test_star_then_literal() {
+        let regex = Regex::new("a*b".as_bytes().to_vec());
+
+        let b = bytes_to_codepoints("b".as_bytes().to_vec());
+        assert!(regex.accepts(b));
+        let ab = bytes_to_codepoints("ab".as_bytes().to_vec());
+        assert!(regex.accepts(ab));
+        let aab = bytes_to_codepoints("aab".as_bytes().to_vec());
+        assert!(regex.accepts(aab));
+        let a = bytes_to_codepoints("a".as_bytes().to_vec());
+        assert!(!regex.accepts(a));
+        let ba = bytes_to_codepoints("ba".as_bytes().to_vec());
+        assert!(!regex.accepts(ba));
+    }
+
+    #[test]
+    fn test_star_group() {
+        let regex = Regex::new("(ab)*".as_bytes().to_vec());
+
+        let empty = bytes_to_codepoints("".as_bytes().to_vec());
+        assert!(regex.accepts(empty));
+        let ab = bytes_to_codepoints("ab".as_bytes().to_vec());
+        assert!(regex.accepts(ab));
+        let abab = bytes_to_codepoints("abab".as_bytes().to_vec());
+        assert!(regex.accepts(abab));
+        let a = bytes_to_codepoints("a".as_bytes().to_vec());
+        assert!(!regex.accepts(a));
+        let aba = bytes_to_codepoints("aba".as_bytes().to_vec());
+        assert!(!regex.accepts(aba));
+    }
+
+    #[test]
     fn test_chained_alternation() {
         let regex_pattern = "a|b|c".to_string();
         let regex = Regex::new(regex_pattern.as_bytes().to_vec());

@@ -58,6 +58,41 @@ impl Alternation {
     }
 }
 
+struct Repetition {
+    inner: Box<Expression>,
+}
+
+impl Repetition {
+    fn build(&self, adjecents: &mut Vec<Vec<Edge>>) -> (usize, usize) {
+        let start = adjecents.len();
+        adjecents.push(vec![]);
+
+        let (inner_start, inner_end) = self.inner.build(adjecents);
+
+        let end = adjecents.len();
+        adjecents.push(vec![]);
+
+        adjecents[start].push(Edge {
+            to: inner_start,
+            r#type: EdgeType::Epsilon,
+        });
+        adjecents[start].push(Edge {
+            to: end,
+            r#type: EdgeType::Epsilon,
+        });
+        adjecents[inner_end].push(Edge {
+            to: end,
+            r#type: EdgeType::Epsilon,
+        });
+        adjecents[inner_end].push(Edge {
+            to: inner_start,
+            r#type: EdgeType::Epsilon,
+        });
+
+        (start, end)
+    }
+}
+
 struct Sequence {
     items: Vec<Expression>,
 }
@@ -81,13 +116,14 @@ pub enum Expression {
     Literal(Literal),
     Alternation(Alternation),
     Sequence(Sequence),
+    Repetition(Repetition),
 }
 
 impl Expression {
     pub fn parse(parser: &mut Parser) -> Self {
         let mut items = vec![];
         while parser.peek().is_some() && parser.peek() != Some(CodePoint::close_paren()) {
-            items.push(Self::parse_unit(parser));
+            items.push(Self::parse_term(parser));
         }
         if items.len() == 1 {
             items.pop().unwrap()
@@ -96,8 +132,8 @@ impl Expression {
         }
     }
 
-    fn parse_unit(parser: &mut Parser) -> Self {
-        let left = if parser.peek() == Some(CodePoint::open_paren()) {
+    fn parse_atom(parser: &mut Parser) -> Self {
+        if parser.peek() == Some(CodePoint::open_paren()) {
             parser.consume();
             let expr = Self::parse(parser);
             parser.consume();
@@ -105,11 +141,22 @@ impl Expression {
         } else {
             let codepoint = parser.consume().expect("unexpected end of input");
             Expression::Literal(Literal { value: codepoint })
-        };
-        let next = parser.peek();
-        if next == Some(CodePoint::pipe()) {
+        }
+    }
+
+    fn parse_term(parser: &mut Parser) -> Self {
+        let atom = Self::parse_atom(parser);
+        let left = if parser.peek() == Some(CodePoint::star()) {
             parser.consume();
-            let right = Self::parse_unit(parser);
+            Expression::Repetition(Repetition {
+                inner: Box::new(atom),
+            })
+        } else {
+            atom
+        };
+        if parser.peek() == Some(CodePoint::pipe()) {
+            parser.consume();
+            let right = Self::parse_term(parser);
             Expression::Alternation(Alternation {
                 left: Box::new(left),
                 right: Box::new(right),
@@ -124,6 +171,7 @@ impl Expression {
             Expression::Literal(l) => l.build(adjecents),
             Expression::Alternation(a) => a.build(adjecents),
             Expression::Sequence(s) => s.build(adjecents),
+            Expression::Repetition(r) => r.build(adjecents),
         }
     }
 
