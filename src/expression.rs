@@ -58,34 +58,57 @@ impl Alternation {
     }
 }
 
+struct Sequence {
+    items: Vec<Expression>,
+}
+
+impl Sequence {
+    fn build(&self, adjecents: &mut Vec<Vec<Edge>>) -> (usize, usize) {
+        let (first_start, mut prev_end) = self.items[0].build(adjecents);
+        for item in &self.items[1..] {
+            let (start, end) = item.build(adjecents);
+            adjecents[prev_end].push(Edge {
+                to: start,
+                r#type: EdgeType::Epsilon,
+            });
+            prev_end = end;
+        }
+        (first_start, prev_end)
+    }
+}
+
 pub enum Expression {
     Literal(Literal),
     Alternation(Alternation),
+    Sequence(Sequence),
 }
 
 impl Expression {
     pub fn parse(parser: &mut Parser) -> Self {
-        let first_codepoint = parser.consume().expect("unexpected end of input");
+        let mut items = vec![];
+        while parser.peek().is_some() {
+            items.push(Self::parse_unit(parser));
+        }
+        if items.len() == 1 {
+            items.pop().unwrap()
+        } else {
+            Expression::Sequence(Sequence { items })
+        }
+    }
 
-        let Some(next) = parser.peek() else {
-            return Expression::Literal(Literal {
-                value: first_codepoint,
-            });
-        };
-
-        if next == CodePoint::pipe() {
+    fn parse_unit(parser: &mut Parser) -> Self {
+        let codepoint = parser.consume().expect("unexpected end of input");
+        let left = Expression::Literal(Literal { value: codepoint });
+        let next = parser.peek();
+        if next == Some(CodePoint::pipe()) {
             parser.consume();
-            let rest = Self::parse(parser);
+            let right = Self::parse_unit(parser);
             Expression::Alternation(Alternation {
-                left: Box::new(Expression::Literal(Literal {
-                    value: first_codepoint,
-                })),
-                right: Box::new(rest),
+                left: Box::new(left),
+                right: Box::new(right),
             })
         } else {
-            Expression::Literal(Literal {
-                value: first_codepoint,
-            })
+            left
         }
     }
 
@@ -93,6 +116,7 @@ impl Expression {
         match self {
             Expression::Literal(l) => l.build(adjecents),
             Expression::Alternation(a) => a.build(adjecents),
+            Expression::Sequence(s) => s.build(adjecents),
         }
     }
 

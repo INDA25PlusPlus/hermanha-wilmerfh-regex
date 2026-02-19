@@ -109,6 +109,34 @@ mod tests {
     use crate::utf_parser::bytes_to_codepoints;
 
     #[test]
+    fn test_concatenation() {
+        let regex = Regex::new("abc".as_bytes().to_vec());
+
+        let abc = bytes_to_codepoints("abc".as_bytes().to_vec());
+        assert!(regex.accepts(abc));
+        let ab = bytes_to_codepoints("ab".as_bytes().to_vec());
+        assert!(!regex.accepts(ab));
+        let d = bytes_to_codepoints("d".as_bytes().to_vec());
+        assert!(!regex.accepts(d));
+    }
+
+    #[test]
+    fn test_concatenation_with_alternation() {
+        let regex = Regex::new("ab|cd".as_bytes().to_vec());
+
+        let ab = bytes_to_codepoints("ab".as_bytes().to_vec());
+        assert!(!regex.accepts(ab));
+        let cd = bytes_to_codepoints("cd".as_bytes().to_vec());
+        assert!(!regex.accepts(cd));
+        let ac = bytes_to_codepoints("ac".as_bytes().to_vec());
+        assert!(!regex.accepts(ac));
+        let abd = bytes_to_codepoints("abd".as_bytes().to_vec());
+        assert!(regex.accepts(abd));
+        let acd = bytes_to_codepoints("acd".as_bytes().to_vec());
+        assert!(regex.accepts(acd));
+    }
+
+    #[test]
     fn test_chained_alternation() {
         let regex_pattern = "a|b|c".to_string();
         let regex = Regex::new(regex_pattern.as_bytes().to_vec());
