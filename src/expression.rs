@@ -86,7 +86,7 @@ pub enum Expression {
 impl Expression {
     pub fn parse(parser: &mut Parser) -> Self {
         let mut items = vec![];
-        while parser.peek().is_some() {
+        while parser.peek().is_some() && parser.peek() != Some(CodePoint::close_paren()) {
             items.push(Self::parse_unit(parser));
         }
         if items.len() == 1 {
@@ -97,8 +97,15 @@ impl Expression {
     }
 
     fn parse_unit(parser: &mut Parser) -> Self {
-        let codepoint = parser.consume().expect("unexpected end of input");
-        let left = Expression::Literal(Literal { value: codepoint });
+        let left = if parser.peek() == Some(CodePoint::open_paren()) {
+            parser.consume();
+            let expr = Self::parse(parser);
+            parser.consume();
+            expr
+        } else {
+            let codepoint = parser.consume().expect("unexpected end of input");
+            Expression::Literal(Literal { value: codepoint })
+        };
         let next = parser.peek();
         if next == Some(CodePoint::pipe()) {
             parser.consume();

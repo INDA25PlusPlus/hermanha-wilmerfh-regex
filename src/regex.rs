@@ -137,6 +137,36 @@ mod tests {
     }
 
     #[test]
+    fn test_grouped_alternation() {
+        let regex = Regex::new("(ab)|(cd)".as_bytes().to_vec());
+
+        let ab = bytes_to_codepoints("ab".as_bytes().to_vec());
+        assert!(regex.accepts(ab));
+        let cd = bytes_to_codepoints("cd".as_bytes().to_vec());
+        assert!(regex.accepts(cd));
+        let abd = bytes_to_codepoints("abd".as_bytes().to_vec());
+        assert!(!regex.accepts(abd));
+        let acd = bytes_to_codepoints("acd".as_bytes().to_vec());
+        assert!(!regex.accepts(acd));
+        let ac = bytes_to_codepoints("ac".as_bytes().to_vec());
+        assert!(!regex.accepts(ac));
+    }
+
+    #[test]
+    fn test_parenthesized_alternation_in_sequence() {
+        let regex = Regex::new("a(b|c)d".as_bytes().to_vec());
+
+        let abd = bytes_to_codepoints("abd".as_bytes().to_vec());
+        assert!(regex.accepts(abd));
+        let acd = bytes_to_codepoints("acd".as_bytes().to_vec());
+        assert!(regex.accepts(acd));
+        let ad = bytes_to_codepoints("ad".as_bytes().to_vec());
+        assert!(!regex.accepts(ad));
+        let abcd = bytes_to_codepoints("abcd".as_bytes().to_vec());
+        assert!(!regex.accepts(abcd));
+    }
+
+    #[test]
     fn test_chained_alternation() {
         let regex_pattern = "a|b|c".to_string();
         let regex = Regex::new(regex_pattern.as_bytes().to_vec());

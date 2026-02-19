@@ -11,6 +11,20 @@ impl CodePoint {
             size: 1,
         }
     }
+
+    pub fn open_paren() -> Self {
+        Self {
+            bytes: vec![b'('],
+            size: 1,
+        }
+    }
+
+    pub fn close_paren() -> Self {
+        Self {
+            bytes: vec![b')'],
+            size: 1,
+        }
+    }
 }
 
 fn utf8_size(b0: u8) -> Option<usize> {
