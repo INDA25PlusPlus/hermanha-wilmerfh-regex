@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
+use crate::expression::Expression;
 use crate::nfa::{Edge, EdgeType, NFA};
 use crate::utf_parser::{CodePoint, Parser};
-use crate::expression::Expression;
-
 
 #[derive(Clone)]
 pub struct Matrix {
-    matrix: Vec<Vec<bool>>
+    matrix: Vec<Vec<bool>>,
 }
 
 impl Matrix {
     pub fn new(size: usize) -> Self {
-        Self { matrix: vec![vec![false; size]; size] }
+        Self {
+            matrix: vec![vec![false; size]; size],
+        }
     }
 
     fn bool_mul(&self, input: &[bool]) -> Vec<bool> {
@@ -24,11 +25,14 @@ impl Matrix {
                 continue;
             }
             let row = &self.matrix[idx];
-            let indicies = row.iter().enumerate().filter(|(_idx, b)| **b).map(|(idx, _b)| idx);
+            let indicies = row
+                .iter()
+                .enumerate()
+                .filter(|(_idx, b)| **b)
+                .map(|(idx, _b)| idx);
             for index in indicies {
                 reach[index] = true;
             }
-
         }
 
         reach
@@ -36,17 +40,17 @@ impl Matrix {
 }
 
 pub struct Regex {
-    NFA: NFA
+    NFA: NFA,
 }
 
 impl Regex {
     fn new(pattern: Vec<u8>) -> Self {
         let mut parser = Parser::from_bytes(pattern);
         let expression = Expression::parse(&mut parser);
-        let mut nfa  = expression.nfa();
+        let mut nfa = expression.nfa();
         nfa.collapse_epsilons();
-        Self{NFA: nfa}
-    }  
+        Self { NFA: nfa }
+    }
 
     fn accepts(&self, input: Vec<CodePoint>) -> bool {
         let adjacents = self.NFA.adjecents.clone();
@@ -56,7 +60,10 @@ impl Regex {
         let mut state = vec![false; n];
         state[self.NFA.start] = true;
         for code_point in input {
-            state = neighbour_map[&code_point].bool_mul(&state);
+            let Some(matrix) = neighbour_map.get(&code_point) else {
+                return false;
+            };
+            state = matrix.bool_mul(&state);
             if !state.iter().any(|x| *x) {
                 return false;
             }
@@ -69,10 +76,12 @@ impl Regex {
         }
 
         false
-        
     }
 
-    fn neighbour_list_to_neighbour_matrix(&self, neighbour_list: Vec<Vec<Edge>>) -> HashMap<CodePoint, Matrix> {
+    fn neighbour_list_to_neighbour_matrix(
+        &self,
+        neighbour_list: Vec<Vec<Edge>>,
+    ) -> HashMap<CodePoint, Matrix> {
         let size = neighbour_list.len();
         let mut map: HashMap<CodePoint, Matrix> = HashMap::new();
 
@@ -80,7 +89,7 @@ impl Regex {
             for edge in neighbors {
                 let code_point = match edge.r#type {
                     EdgeType::Regular(code_point) => code_point,
-                    EdgeType::Epsilon => panic!("not possible") 
+                    EdgeType::Epsilon => panic!("not possible"),
                 };
                 let j = edge.to;
 
@@ -91,5 +100,26 @@ impl Regex {
         }
 
         map
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utf_parser::bytes_to_codepoints;
+
+    #[test]
+    fn test_chained_alternation() {
+        let regex_pattern = "a|b|c".to_string();
+        let regex = Regex::new(regex_pattern.as_bytes().to_vec());
+
+        let a = bytes_to_codepoints("a".to_string().as_bytes().to_vec());
+        assert!(regex.accepts(a));
+        let b = bytes_to_codepoints("b".to_string().as_bytes().to_vec());
+        assert!(regex.accepts(b));
+        let c = bytes_to_codepoints("c".to_string().as_bytes().to_vec());
+        assert!(regex.accepts(c));
+        let d = bytes_to_codepoints("d".to_string().as_bytes().to_vec());
+        assert!(!regex.accepts(d));
     }
 }

@@ -41,31 +41,7 @@ impl Parser {
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
-        let mut iter = bytes.into_iter();
-        let mut code_points = Vec::new();
-
-        while let Some(b0) = iter.next() {
-            let size = utf8_size(b0).expect("wrong utf8 format");
-            let mut cp_bytes = Vec::with_capacity(size);
-            cp_bytes.push(b0);
-
-            for _ in 1..size {
-                let b = iter.next().expect("size incorrect");
-
-                if (b & 0b1100_0000) != 0b1000_0000 {
-                    panic!("wrong utf8 format")
-                }
-
-                cp_bytes.push(b)
-            }
-
-            let cp = CodePoint {
-                bytes: cp_bytes,
-                size,
-            };
-            code_points.push(cp);
-        }
-
+        let code_points = bytes_to_codepoints(bytes);
         return Self::new(code_points);
     }
 
@@ -86,6 +62,35 @@ impl Parser {
             Some(cp)
         }
     }
+}
+
+pub fn bytes_to_codepoints(bytes: Vec<u8>) -> Vec<CodePoint> {
+    let mut iter = bytes.into_iter();
+    let mut code_points = Vec::new();
+
+    while let Some(b0) = iter.next() {
+        let size = utf8_size(b0).expect("wrong utf8 format");
+        let mut cp_bytes = Vec::with_capacity(size);
+        cp_bytes.push(b0);
+
+        for _ in 1..size {
+            let b = iter.next().expect("size incorrect");
+
+            if (b & 0b1100_0000) != 0b1000_0000 {
+                panic!("wrong utf8 format")
+            }
+
+            cp_bytes.push(b)
+        }
+
+        let cp = CodePoint {
+            bytes: cp_bytes,
+            size,
+        };
+        code_points.push(cp);
+    }
+
+    code_points
 }
 
 // #[cfg(test)]
